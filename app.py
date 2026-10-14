@@ -1,12 +1,11 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import HTMLResponse
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
 import secrets
 import os
 
 app = FastAPI()
 
-# Each invitation link has its own private room.
+# Invitation rooms
 rooms = {}
 
 HTML = r"""
@@ -14,9 +13,7 @@ HTML = r"""
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1">
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Touch & Vibe ❤️</title>
 
 <style>
@@ -31,10 +28,10 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    background:
+        radial-gradient(ellipse at bottom, #35105b, #10051f 55%, #02010b);
     font-family: Arial, sans-serif;
     color: white;
-    background:
-        radial-gradient(ellipse at bottom, #32105c 0%, #10051f 50%, #02010b 100%);
 }
 
 .stars {
@@ -48,24 +45,24 @@ body {
         radial-gradient(1px 1px at 220px 160px, white, transparent),
         radial-gradient(2px 2px at 270px 40px, #ffb9ec, transparent);
     background-size: 300px 220px;
-    animation: drift 30s linear infinite;
+    animation: starsMove 35s linear infinite;
 }
 
-@keyframes drift {
+@keyframes starsMove {
     from { transform: translateY(0); }
-    to   { transform: translateY(-220px); }
+    to { transform: translateY(-220px); }
 }
 
 .card {
     position: relative;
     z-index: 2;
     width: min(90%, 420px);
-    padding: 35px 22px;
+    padding: 30px 22px;
     text-align: center;
     border: 1px solid rgba(255, 160, 230, .35);
     border-radius: 28px;
-    background: rgba(24, 8, 43, .72);
-    box-shadow: 0 0 40px rgba(255, 30, 170, .17);
+    background: rgba(24, 8, 43, .78);
+    box-shadow: 0 0 40px rgba(255, 30, 170, .2);
     backdrop-filter: blur(12px);
 }
 
@@ -78,32 +75,39 @@ h1 {
 .subtitle {
     color: #e8c9ff;
     font-size: 14px;
+    line-height: 1.6;
 }
 
 #heart {
     display: block;
-    margin: 22px auto;
+    margin: 25px auto;
     padding: 0;
     border: none;
     outline: none;
     background: transparent;
-    color: #ff278b;
     font-size: 125px;
     cursor: pointer;
-    filter: drop-shadow(0 0 18px #ff168d);
-    animation: beat 1.1s infinite;
+    filter: drop-shadow(0 0 20px #ff168d);
+    animation: heartbeat 1.1s infinite;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
 
-@keyframes beat {
+@keyframes heartbeat {
     0%, 100% { transform: scale(1); }
-    15%      { transform: scale(1.13); }
-    30%      { transform: scale(1); }
-    45%      { transform: scale(1.09); }
+    15% { transform: scale(1.13); }
+    30% { transform: scale(1); }
+    45% { transform: scale(1.09); }
 }
 
-button.action {
+#status {
+    min-height: 40px;
+    color: #ffc9ec;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.action {
     border: 0;
     border-radius: 24px;
     padding: 13px 20px;
@@ -113,32 +117,17 @@ button.action {
     font-size: 15px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 0 18px rgba(255, 50, 170, .3);
-}
-
-#status {
-    color: #ffc9ec;
-    font-size: 14px;
-    min-height: 20px;
-    overflow-wrap: anywhere;
 }
 
 #invite {
     display: none;
-    width: 100%;
-    margin-top: 12px;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid #b45bdc;
-    background: #180b2a;
-    color: white;
     overflow-wrap: anywhere;
-    font-size: 12px;
+    margin-top: 15px;
 }
 
 #inviteLink {
     color: #ffc2eb;
-    overflow-wrap: anywhere;
+    font-size: 13px;
 }
 
 .hidden {
@@ -156,8 +145,7 @@ button.action {
 
     <div id="setup">
         <p class="subtitle">
-            Create your private invitation and share it
-            with your special person.
+            Create an invitation and share it with your special person.
         </p>
 
         <button class="action" id="create">
@@ -168,32 +156,28 @@ button.action {
             <p>Your invitation link:</p>
             <a id="inviteLink" href="#"></a>
             <br>
-            <button class="action" id="copy">
-                Copy Invitation Link
-            </button>
+            <button class="action" id="copy">Copy Link ❤️</button>
         </div>
     </div>
 
     <div id="heartArea" class="hidden">
         <button id="heart" aria-label="Send a heart">❤️</button>
-        <p id="status">Connecting to your special person...</p>
-        <p class="subtitle">
-            Touch the heart to send a little love.
-        </p>
+        <p id="status">Connecting...</p>
+        <p class="subtitle">Touch the heart to send a little love.</p>
     </div>
 </div>
 
 <script>
-const path = location.pathname;
-const roomMatch = path.match(/^\/r\/([A-Za-z0-9_-]+)$/);
-
 const setup = document.getElementById("setup");
 const heartArea = document.getElementById("heartArea");
 const statusText = document.getElementById("status");
 const heart = document.getElementById("heart");
 
-let socket;
-let retryTimer;
+const roomMatch = location.pathname.match(/^\/r\/([A-Za-z0-9_-]+)$/);
+
+let socket = null;
+let retryTimer = null;
+let manuallyClosed = false;
 
 function showRoom() {
     setup.classList.add("hidden");
@@ -211,7 +195,7 @@ async function createInvitation() {
         });
 
         if (!response.ok) {
-            throw new Error("Could not create invitation");
+            throw new Error("Could not create link");
         }
 
         const data = await response.json();
@@ -227,14 +211,14 @@ async function createInvitation() {
         document.getElementById("copy").onclick = async () => {
             try {
                 await navigator.clipboard.writeText(link);
-                document.getElementById("copy").textContent =
-                    "Copied! ❤️";
-            } catch (e) {
-                window.prompt("Copy your invitation link:", link);
+                document.getElementById("copy").textContent = "Copied! ❤️";
+            } catch (error) {
+                window.prompt("Copy this invitation link:", link);
             }
         };
 
         button.textContent = "Link Created ❤️";
+
     } catch (error) {
         button.disabled = false;
         button.textContent = "Try Again";
@@ -246,7 +230,50 @@ document.getElementById("create").addEventListener(
     "click", createInvitation
 );
 
+function animateHeart() {
+    heart.animate(
+        [
+            { transform: "scale(1)" },
+            { transform: "scale(1.35)" },
+            { transform: "scale(1)" }
+        ],
+        { duration: 450 }
+    );
+}
+
+function vibratePhone() {
+    if (typeof navigator.vibrate !== "function") {
+        statusText.textContent =
+            "Heart arrived ❤️ — this browser does not support vibration.";
+        return false;
+    }
+
+    try {
+        const result = navigator.vibrate([200, 100, 200]);
+
+        if (result) {
+            statusText.textContent =
+                "A little love arrived! Vibration requested 💗";
+        } else {
+            statusText.textContent =
+                "Heart arrived ❤️ — vibration unavailable or blocked.";
+        }
+
+        return result;
+    } catch (error) {
+        statusText.textContent =
+            "Heart arrived ❤️ — the phone blocked vibration.";
+        return false;
+    }
+}
+
 function connectRoom(roomId) {
+    if (socket &&
+        (socket.readyState === WebSocket.OPEN ||
+         socket.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
     const protocol =
         location.protocol === "https:" ? "wss:" : "ws:";
 
@@ -260,40 +287,25 @@ function connectRoom(roomId) {
 
     socket.onmessage = (event) => {
         if (event.data === "touch") {
-            if ("vibrate" in navigator) {
-                navigator.vibrate([120, 60, 180]);
-            }
-
-            heart.animate(
-                [
-                    { transform: "scale(1)" },
-                    { transform: "scale(1.35)" },
-                    { transform: "scale(1)" }
-                ],
-                { duration: 450 }
-            );
-
-            statusText.textContent = "A little love arrived! 💗";
-
-            setTimeout(() => {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    statusText.textContent = "Connected ❤️";
-                }
-            }, 1800);
+            animateHeart();
+            vibratePhone();
         }
-    };
-
-    socket.onclose = () => {
-        statusText.textContent = "Reconnecting...";
-        clearTimeout(retryTimer);
-
-        retryTimer = setTimeout(
-            () => connectRoom(roomId), 3000
-        );
     };
 
     socket.onerror = () => {
         statusText.textContent = "Connection problem. Retrying...";
+    };
+
+    socket.onclose = () => {
+        if (!manuallyClosed) {
+            statusText.textContent = "Reconnecting...";
+            clearTimeout(retryTimer);
+
+            retryTimer = setTimeout(() => {
+                socket = null;
+                connectRoom(roomId);
+            }, 3000);
+        }
     };
 }
 
@@ -303,7 +315,13 @@ if (roomMatch) {
 
     heart.addEventListener("click", () => {
         if (socket && socket.readyState === WebSocket.OPEN) {
+            // Small local test vibration on the device being touched.
+            if (typeof navigator.vibrate === "function") {
+                navigator.vibrate(80);
+            }
+
             socket.send("touch");
+            statusText.textContent = "Heart sent! ❤️";
         } else {
             statusText.textContent =
                 "Not connected yet. Please wait...";
@@ -326,9 +344,7 @@ async def create_room():
     room_id = secrets.token_urlsafe(24)
     rooms.setdefault(room_id, set())
 
-    return JSONResponse({
-        "path": f"/r/{room_id}"
-    })
+    return JSONResponse({"path": f"/r/{room_id}"})
 
 
 @app.get("/r/{room_id}", response_class=HTMLResponse)
