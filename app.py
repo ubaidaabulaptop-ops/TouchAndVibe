@@ -4,8 +4,6 @@ import secrets
 import os
 
 app = FastAPI()
-
-# Invitation rooms
 rooms = {}
 
 HTML = r"""
@@ -13,7 +11,9 @@ HTML = r"""
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#08030d">
+
 <title>Touch & Vibe ❤️</title>
 
 <style>
@@ -25,169 +25,372 @@ body {
     margin: 0;
     min-height: 100vh;
     overflow: hidden;
+    font-family: Arial, sans-serif;
+    color: white;
+    background:
+        radial-gradient(ellipse at 50% 110%, #50103d 0%, transparent 55%),
+        radial-gradient(ellipse at 10% 10%, #25104c 0%, transparent 50%),
+        #05030a;
+}
+
+#universe {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0 8px #ffc8f1;
+    animation: twinkle 2s infinite alternate;
+}
+
+@keyframes twinkle {
+    from { opacity: .2; transform: scale(.7); }
+    to { opacity: 1; transform: scale(1.7); }
+}
+
+.nebula {
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    filter: blur(85px);
+    opacity: .23;
+    background: #b20cff;
+    animation: nebulaMove 12s ease-in-out infinite alternate;
+}
+
+.nebula.one {
+    top: 5%;
+    left: -100px;
+}
+
+.nebula.two {
+    right: -100px;
+    bottom: 0;
+    background: #ff147e;
+    animation-delay: -5s;
+}
+
+@keyframes nebulaMove {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(40px, -35px) scale(1.3); }
+}
+
+.screen {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    background:
-        radial-gradient(ellipse at bottom, #35105b, #10051f 55%, #02010b);
-    font-family: Arial, sans-serif;
-    color: white;
-}
-
-.stars {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-        radial-gradient(2px 2px at 20px 30px, white, transparent),
-        radial-gradient(1px 1px at 80px 110px, #ffb9ec, transparent),
-        radial-gradient(2px 2px at 150px 70px, #b9d8ff, transparent),
-        radial-gradient(1px 1px at 220px 160px, white, transparent),
-        radial-gradient(2px 2px at 270px 40px, #ffb9ec, transparent);
-    background-size: 300px 220px;
-    animation: starsMove 35s linear infinite;
-}
-
-@keyframes starsMove {
-    from { transform: translateY(0); }
-    to { transform: translateY(-220px); }
+    padding: 20px;
 }
 
 .card {
-    position: relative;
-    z-index: 2;
-    width: min(90%, 420px);
-    padding: 30px 22px;
+    width: min(100%, 410px);
+    padding: 34px 23px;
     text-align: center;
-    border: 1px solid rgba(255, 160, 230, .35);
+    border: 1px solid rgba(255, 151, 221, .3);
     border-radius: 28px;
-    background: rgba(24, 8, 43, .78);
-    box-shadow: 0 0 40px rgba(255, 30, 170, .2);
-    backdrop-filter: blur(12px);
+    background: rgba(15, 7, 25, .78);
+    backdrop-filter: blur(18px);
+    box-shadow:
+        0 0 35px rgba(255, 28, 150, .12),
+        inset 0 0 30px rgba(150, 50, 255, .05);
+    animation: cardAppear 1s ease;
+}
+
+@keyframes cardAppear {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.eyebrow {
+    color: #ff9dd9;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
 }
 
 h1 {
-    color: #ffb6e7;
-    text-shadow: 0 0 18px #ff28b8;
-    letter-spacing: 2px;
+    font-size: clamp(27px, 7vw, 38px);
+    margin: 18px 0 12px;
+    line-height: 1.25;
+    background: linear-gradient(90deg, #fff, #ff9edb, #c6a0ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 15px rgba(255, 65, 177, .2));
 }
 
 .subtitle {
-    color: #e8c9ff;
+    color: #d5c1e9;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.8;
+}
+
+.small-heart {
+    font-size: 47px;
+    margin: 18px 0;
+    display: inline-block;
+    filter: drop-shadow(0 0 15px #ff2c9c);
+    animation: heartbeat 1.3s infinite;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scale(1.15); }
+    30% { transform: scale(1); }
+    45% { transform: scale(1.1); }
+}
+
+.action {
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px 18px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 30px;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: .5px;
+    background: linear-gradient(100deg, #e91e83, #8e36ff);
+    box-shadow: 0 0 25px rgba(222, 36, 161, .25);
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+    touch-action: manipulation;
+}
+
+.action:active {
+    transform: scale(.97);
+    box-shadow: 0 0 35px rgba(255, 36, 161, .5);
 }
 
 #heart {
     display: block;
-    margin: 25px auto;
-    padding: 0;
+    margin: 22px auto;
+    padding: 5px;
     border: none;
     outline: none;
     background: transparent;
     font-size: 125px;
     cursor: pointer;
-    filter: drop-shadow(0 0 20px #ff168d);
-    animation: heartbeat 1.1s infinite;
+    filter: drop-shadow(0 0 15px #ff168d);
+    animation: heartbeat 1.15s infinite;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
 
-@keyframes heartbeat {
-    0%, 100% { transform: scale(1); }
-    15% { transform: scale(1.13); }
-    30% { transform: scale(1); }
-    45% { transform: scale(1.09); }
+#heart:active {
+    transform: scale(1.2);
 }
 
 #status {
-    min-height: 40px;
-    color: #ffc9ec;
-    font-size: 14px;
-    overflow-wrap: anywhere;
-}
-
-.action {
-    border: 0;
-    border-radius: 24px;
-    padding: 13px 20px;
-    margin-top: 12px;
-    background: linear-gradient(90deg, #ff329b, #a747ff);
-    color: white;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-#invite {
-    display: none;
-    overflow-wrap: anywhere;
+    min-height: 38px;
     margin-top: 15px;
-}
-
-#inviteLink {
-    color: #ffc2eb;
+    color: #ffb8e4;
     font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
 }
 
 .hidden {
     display: none !important;
 }
+
+#invite {
+    display: none;
+    overflow-wrap: anywhere;
+    margin-top: 20px;
+    color: #ffb8e4;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+#inviteLink {
+    color: #ffb8e4;
+    overflow-wrap: anywhere;
+}
+
+.footer {
+    margin-top: 24px;
+    font-size: 11px;
+    color: #887592;
+    letter-spacing: 1px;
+}
+
+.floating-heart {
+    position: fixed;
+    bottom: -30px;
+    z-index: 1;
+    pointer-events: none;
+    animation: floatUp 5s linear forwards;
+    filter: drop-shadow(0 0 7px #ff3fa9);
+}
+
+@keyframes floatUp {
+    0% {
+        opacity: 0;
+        transform: translateY(0) rotate(0deg) scale(.7);
+    }
+    15% { opacity: .8; }
+    85% { opacity: .7; }
+    100% {
+        opacity: 0;
+        transform: translateY(-110vh) rotate(35deg) scale(1.2);
+    }
+}
+
 </style>
 </head>
 
 <body>
-<div class="stars"></div>
 
-<div class="card">
-    <h1>Touch & Vibe</h1>
-    <p class="subtitle">Two hearts. One little moment. ❤️</p>
+<div id="universe">
+    <div class="nebula one"></div>
+    <div class="nebula two"></div>
+</div>
 
-    <div id="setup">
+<div class="screen">
+
+    <!-- Invitation creation screen -->
+    <div class="card" id="setup">
+        <div class="eyebrow">Your Private Universe</div>
+
+        <h1>Touch & Vibe</h1>
+
+        <div class="small-heart">💗</div>
+
         <p class="subtitle">
-            Create an invitation and share it with your special person.
+            A little connection between two hearts,
+            no matter how far apart they are.
         </p>
 
         <button class="action" id="create">
-            Create Private Link 💌
+            Create Our Private Link 💌
         </button>
 
         <div id="invite">
-            <p>Your invitation link:</p>
+            <p>Your invitation is ready ❤️</p>
             <a id="inviteLink" href="#"></a>
-            <br>
-            <button class="action" id="copy">Copy Link ❤️</button>
+            <button class="action" id="copy">Copy Invitation Link</button>
         </div>
+
+        <div class="footer">MADE WITH LOVE ✦</div>
     </div>
 
-    <div id="heartArea" class="hidden">
-        <button id="heart" aria-label="Send a heart">❤️</button>
-        <p id="status">Connecting...</p>
-        <p class="subtitle">Touch the heart to send a little love.</p>
+    <!-- Welcome screen -->
+    <div class="card hidden" id="welcome">
+        <div class="eyebrow">A little universe for two</div>
+
+        <h1>Allen <span style="color:#ff68b5">❤️</span> Sania</h1>
+
+        <div class="small-heart">💖</div>
+
+        <p class="subtitle">
+            Miles may keep us apart,<br>
+            but a little touch can bring us closer.
+        </p>
+
+        <p class="subtitle">
+            Welcome to our little universe ✨
+        </p>
+
+        <button class="action" id="enter">
+            Enter Our Universe 💌
+        </button>
+
+        <div class="footer">TWO HEARTS · ONE CONNECTION</div>
     </div>
+
+    <!-- Heart screen -->
+    <div class="card hidden" id="heartArea">
+        <div class="eyebrow">Our Little Universe</div>
+
+        <h1>Allen <span style="color:#ff68b5">❤️</span> Sania</h1>
+
+        <p class="subtitle">
+            Even when we're far apart,<br>
+            send a little touch from the heart.
+        </p>
+
+        <button id="heart" aria-label="Send a heart">❤️</button>
+
+        <p id="status">Connecting to your universe...</p>
+
+        <p class="subtitle">
+            Touch the heart to send a little love 💗
+        </p>
+
+        <div class="footer">ALWAYS CONNECTED IN HEART ✦</div>
+    </div>
+
 </div>
 
 <script>
 const setup = document.getElementById("setup");
+const welcome = document.getElementById("welcome");
 const heartArea = document.getElementById("heartArea");
-const statusText = document.getElementById("status");
 const heart = document.getElementById("heart");
+const statusText = document.getElementById("status");
 
-const roomMatch = location.pathname.match(/^\/r\/([A-Za-z0-9_-]+)$/);
+const roomMatch = location.pathname.match(
+    /^\/r\/([A-Za-z0-9_-]+)$/
+);
 
 let socket = null;
 let retryTimer = null;
+let currentRoom = null;
 let manuallyClosed = false;
 
-function showRoom() {
-    setup.classList.add("hidden");
-    heartArea.classList.remove("hidden");
+function createStars() {
+    const universe = document.getElementById("universe");
+
+    for (let i = 0; i < 100; i++) {
+        const star = document.createElement("div");
+        star.className = "star";
+        star.style.left = Math.random() * 100 + "%";
+        star.style.top = Math.random() * 100 + "%";
+        star.style.animationDelay = Math.random() * 3 + "s";
+        star.style.animationDuration =
+            (1.5 + Math.random() * 3) + "s";
+
+        universe.appendChild(star);
+    }
 }
+
+function floatingHeart() {
+    const item = document.createElement("div");
+    item.className = "floating-heart";
+    item.textContent = ["💗", "💕", "💖", "♡"][Math.floor(
+        Math.random() * 4
+    )];
+
+    item.style.left = Math.random() * 95 + "%";
+    item.style.fontSize = (14 + Math.random() * 20) + "px";
+    item.style.animationDuration = (4 + Math.random() * 4) + "s";
+
+    document.body.appendChild(item);
+
+    setTimeout(() => item.remove(), 8500);
+}
+
+createStars();
+setInterval(floatingHeart, 1100);
 
 async function createInvitation() {
     const button = document.getElementById("create");
+
     button.disabled = true;
-    button.textContent = "Creating link...";
+    button.textContent = "Creating your link...";
 
     try {
         const response = await fetch("/create-room", {
@@ -211,9 +414,10 @@ async function createInvitation() {
         document.getElementById("copy").onclick = async () => {
             try {
                 await navigator.clipboard.writeText(link);
-                document.getElementById("copy").textContent = "Copied! ❤️";
+                document.getElementById("copy").textContent =
+                    "Copied! ❤️";
             } catch (error) {
-                window.prompt("Copy this invitation link:", link);
+                window.prompt("Copy your invitation link:", link);
             }
         };
 
@@ -230,22 +434,48 @@ document.getElementById("create").addEventListener(
     "click", createInvitation
 );
 
+function showWelcome() {
+    setup.classList.add("hidden");
+    heartArea.classList.add("hidden");
+    welcome.classList.remove("hidden");
+}
+
+function showHeartScreen() {
+    setup.classList.add("hidden");
+    welcome.classList.add("hidden");
+    heartArea.classList.remove("hidden");
+
+    if (currentRoom) {
+        connectRoom(currentRoom);
+    }
+}
+
+document.getElementById("enter").addEventListener(
+    "click", showHeartScreen
+);
+
 function animateHeart() {
     heart.animate(
         [
             { transform: "scale(1)" },
-            { transform: "scale(1.35)" },
+            { transform: "scale(1.4)" },
             { transform: "scale(1)" }
         ],
-        { duration: 450 }
+        {
+            duration: 500,
+            easing: "ease-out"
+        }
     );
+
+    floatingHeart();
+    floatingHeart();
 }
 
 function vibratePhone() {
     if (typeof navigator.vibrate !== "function") {
         statusText.textContent =
-            "Heart arrived ❤️ — this browser does not support vibration.";
-        return false;
+            "Heart received ❤️ — vibration is not supported here.";
+        return;
     }
 
     try {
@@ -253,17 +483,14 @@ function vibratePhone() {
 
         if (result) {
             statusText.textContent =
-                "A little love arrived! Vibration requested 💗";
+                "A little love arrived! 💗";
         } else {
             statusText.textContent =
-                "Heart arrived ❤️ — vibration unavailable or blocked.";
+                "Heart received ❤️ — vibration may be blocked.";
         }
-
-        return result;
     } catch (error) {
         statusText.textContent =
-            "Heart arrived ❤️ — the phone blocked vibration.";
-        return false;
+            "Heart received ❤️ — vibration was blocked.";
     }
 }
 
@@ -274,6 +501,8 @@ function connectRoom(roomId) {
         return;
     }
 
+    manuallyClosed = false;
+
     const protocol =
         location.protocol === "https:" ? "wss:" : "ws:";
 
@@ -282,7 +511,7 @@ function connectRoom(roomId) {
     );
 
     socket.onopen = () => {
-        statusText.textContent = "Connected ❤️";
+        statusText.textContent = "Connected to our universe ❤️";
     };
 
     socket.onmessage = (event) => {
@@ -293,42 +522,46 @@ function connectRoom(roomId) {
     };
 
     socket.onerror = () => {
-        statusText.textContent = "Connection problem. Retrying...";
+        statusText.textContent = "Connection issue. Reconnecting...";
     };
 
     socket.onclose = () => {
-        if (!manuallyClosed) {
-            statusText.textContent = "Reconnecting...";
+        if (!manuallyClosed && currentRoom) {
+            statusText.textContent = "Reconnecting... 💗";
+
             clearTimeout(retryTimer);
 
             retryTimer = setTimeout(() => {
                 socket = null;
-                connectRoom(roomId);
+                connectRoom(currentRoom);
             }, 3000);
         }
     };
 }
 
 if (roomMatch) {
-    showRoom();
-    connectRoom(roomMatch[1]);
-
-    heart.addEventListener("click", () => {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            // Small local test vibration on the device being touched.
-            if (typeof navigator.vibrate === "function") {
-                navigator.vibrate(80);
-            }
-
-            socket.send("touch");
-            statusText.textContent = "Heart sent! ❤️";
-        } else {
-            statusText.textContent =
-                "Not connected yet. Please wait...";
-        }
-    });
+    currentRoom = roomMatch[1];
+    showWelcome();
 }
+
+heart.addEventListener("click", () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        if (typeof navigator.vibrate === "function") {
+            navigator.vibrate(80);
+        }
+
+        socket.send("touch");
+        animateHeart();
+
+        statusText.textContent = "Your heart was sent! ❤️";
+    } else {
+        statusText.textContent =
+            "Connecting... please try again in a moment.";
+    }
+});
+
 </script>
+
 </body>
 </html>
 """
