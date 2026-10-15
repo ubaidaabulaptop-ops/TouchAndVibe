@@ -291,7 +291,7 @@ h1 {
     <div class="card hidden" id="welcome">
         <div class="eyebrow">A little universe for two</div>
 
-        <h1>Allen <span style="color:#ff68b5">❤️</span> Sania</h1>
+        <h1>abu ubaida <span style="color:#ff68b5">❤️</span> Sania</h1>
 
         <div class="small-heart">💖</div>
 
