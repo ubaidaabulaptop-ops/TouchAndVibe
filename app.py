@@ -1,17 +1,10 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 import secrets
 import os
 
 app = FastAPI()
-import os
 
-app.mount(
-    "/static",
-    StaticFiles(directory=os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")),
-    name="static"
-)
 rooms = {}
 
 HTML = r"""
