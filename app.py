@@ -612,13 +612,30 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
 @app.get("/manifest.json")
 async def manifest():
     return JSONResponse({
+        "id": "/",
         "name": "Touch & Vibe - Abu Ubaida ❤️ Sania",
         "short_name": "Touch & Vibe",
         "description": "A special heart connection between Abu Ubaida and Sania.",
         "start_url": "/",
+        "scope": "/",
         "display": "standalone",
         "background_color": "#08030d",
-        "theme_color": "#08030d"
+        "theme_color": "#08030d",
+        "orientation": "portrait",
+        "icons": [
+            {
+                "src": "/static/icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any"
+            }
+        ]
     })
 if __name__ == "__main__":
     import uvicorn
