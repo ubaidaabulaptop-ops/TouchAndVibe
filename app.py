@@ -13,7 +13,7 @@ HTML = r"""
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#08030d">
-
+<link rel="manifest" href="/manifest.json">
 <title>Touch & Vibe ❤️</title>
 
 <style>
